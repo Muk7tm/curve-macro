@@ -1,7 +1,7 @@
 /*
  * Compatibility wrapper for one-file builds.
  *
- * The maintained GUI application source now lives in src/.
+ * The maintained Curve Macro GUI application source now lives in src/.
  * Prefer:
  *
  *     make

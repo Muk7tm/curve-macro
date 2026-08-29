@@ -1,5 +1,5 @@
-#ifndef ROBLOX_CAMERA_FLIP_INPUT_H
-#define ROBLOX_CAMERA_FLIP_INPUT_H
+#ifndef CURVE_MACRO_INPUT_H
+#define CURVE_MACRO_INPUT_H
 
 #include "config.h"
 

@@ -1,4 +1,4 @@
-# Roblox Camera Flip
+# Curve Macro
 
 Native Linux GTK3 GUI for the Roblox camera flip macro.
 
@@ -15,10 +15,10 @@ Fish shell:
 
 ```fish
 sudo pacman -S --needed base-devel gtk3 libxtst libx11
-mkdir -p ~/.config/roblox-camera-flip
+mkdir -p ~/.config/curve-macro
 make clean
 make
-./camera_flip
+./curve_macro
 ```
 
 ## Install
@@ -33,7 +33,7 @@ System install:
 
 ```fish
 sudo make install
-camera_flip
+curve_macro
 ```
 
 ## Permissions
@@ -51,7 +51,7 @@ getent group input
 Install the included udev rule if your user cannot read `/dev/input/event*` or `/dev/uinput`:
 
 ```fish
-sudo install -Dm644 config/99-roblox-camera-flip.rules /etc/udev/rules.d/99-roblox-camera-flip.rules
+sudo install -Dm644 config/99-curve-macro.rules /etc/udev/rules.d/99-curve-macro.rules
 sudo udevadm control --reload-rules
 sudo udevadm trigger
 sudo usermod -aG input $USER
@@ -70,7 +70,7 @@ test -w /dev/uinput; and echo uinput-writable; or echo uinput-not-writable
 Settings are saved to:
 
 ```text
-~/.config/roblox-camera-flip/config.ini
+~/.config/curve-macro/config.ini
 ```
 
 Defaults:

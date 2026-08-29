@@ -376,7 +376,7 @@ int gui_run(int argc, char **argv)
     gtk_box_pack_start(GTK_BOX(outer), header, FALSE, FALSE, 0);
 
     label = gtk_label_new(NULL);
-    gtk_label_set_markup(GTK_LABEL(label), "<span size=\"x-large\"><b>Roblox Camera Flip</b></span>");
+    gtk_label_set_markup(GTK_LABEL(label), "<span size=\"x-large\"><b>Curve Macro</b></span>");
     gtk_widget_set_halign(label, GTK_ALIGN_START);
     gtk_widget_set_hexpand(label, TRUE);
     gtk_box_pack_start(GTK_BOX(header), label, TRUE, TRUE, 0);

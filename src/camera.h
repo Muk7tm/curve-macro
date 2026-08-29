@@ -1,5 +1,5 @@
-#ifndef ROBLOX_CAMERA_FLIP_CAMERA_H
-#define ROBLOX_CAMERA_FLIP_CAMERA_H
+#ifndef CURVE_MACRO_CAMERA_H
+#define CURVE_MACRO_CAMERA_H
 
 #include <X11/Xlib.h>
 #include <stdbool.h>

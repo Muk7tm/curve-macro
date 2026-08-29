@@ -25,12 +25,12 @@ int main(int argc, char **argv)
     if ((session_type && strcmp(session_type, "wayland") == 0) ||
         (wayland_display && *wayland_display && (!session_type || strcmp(session_type, "x11") != 0)))
     {
-        fprintf(stderr, "Roblox Camera Flip targets X11 only. Log into a Plasma X11 session and try again.\n");
+        fprintf(stderr, "Curve Macro targets X11 only. Log into a Plasma X11 session and try again.\n");
         return 1;
     }
     if (!display || !*display)
     {
-        fprintf(stderr, "DISPLAY is not set. Roblox Camera Flip requires an X11 display.\n");
+        fprintf(stderr, "DISPLAY is not set. Curve Macro requires an X11 display.\n");
         return 1;
     }
 

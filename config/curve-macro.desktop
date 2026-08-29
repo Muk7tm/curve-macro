@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Curve Macro
+Comment=Native X11 curve macro for Roblox camera flips
+Exec=curve_macro
+Icon=input-mouse
+Terminal=false
+Categories=Utility;

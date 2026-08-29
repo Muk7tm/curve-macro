@@ -1,7 +1,7 @@
 CC ?= gcc
 PKG_CONFIG ?= pkg-config
 
-TARGET := camera_flip
+TARGET := curve_macro
 SRC := src/main.c src/gui.c src/input.c src/camera.c src/config.c src/performance.c
 OBJ := $(SRC:.c=.o)
 
@@ -29,17 +29,19 @@ $(TARGET): $(OBJ)
 
 install: $(TARGET)
 	install -Dm755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
-	install -Dm644 config/roblox-camera-flip.desktop $(DESTDIR)$(DATADIR)/applications/roblox-camera-flip.desktop
+	install -Dm644 config/curve-macro.desktop $(DESTDIR)$(DATADIR)/applications/curve-macro.desktop
 
 install-user: $(TARGET)
 	install -Dm755 $(TARGET) $(USER_BINDIR)/$(TARGET)
 	mkdir -p $(USER_APPDIR)
-	sed "s|^Exec=.*|Exec=$(USER_BINDIR)/$(TARGET)|" config/roblox-camera-flip.desktop > $(USER_APPDIR)/roblox-camera-flip.desktop
-	chmod 644 $(USER_APPDIR)/roblox-camera-flip.desktop
+	rm -f $(USER_BINDIR)/camera_flip $(USER_APPDIR)/roblox-camera-flip.desktop
+	sed "s|^Exec=.*|Exec=$(USER_BINDIR)/$(TARGET)|" config/curve-macro.desktop > $(USER_APPDIR)/curve-macro.desktop
+	chmod 644 $(USER_APPDIR)/curve-macro.desktop
 	if [ -d "$(USER_DESKTOP)" ]; then \
-		sed "s|^Exec=.*|Exec=$(USER_BINDIR)/$(TARGET)|" config/roblox-camera-flip.desktop > $(USER_DESKTOP)/roblox-camera-flip.desktop; \
-		chmod 755 $(USER_DESKTOP)/roblox-camera-flip.desktop; \
+		rm -f $(USER_DESKTOP)/roblox-camera-flip.desktop; \
+		sed "s|^Exec=.*|Exec=$(USER_BINDIR)/$(TARGET)|" config/curve-macro.desktop > $(USER_DESKTOP)/curve-macro.desktop; \
+		chmod 755 $(USER_DESKTOP)/curve-macro.desktop; \
 	fi
 
 clean:
-	rm -f $(TARGET) $(OBJ)
+	rm -f $(TARGET) camera_flip $(OBJ)

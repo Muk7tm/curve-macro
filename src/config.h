@@ -1,5 +1,5 @@
-#ifndef ROBLOX_CAMERA_FLIP_CONFIG_H
-#define ROBLOX_CAMERA_FLIP_CONFIG_H
+#ifndef CURVE_MACRO_CONFIG_H
+#define CURVE_MACRO_CONFIG_H
 
 #include <linux/input-event-codes.h>
 
@@ -7,8 +7,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define APP_ID "roblox-camera-flip"
-#define APP_TITLE "Roblox Camera Flip"
+#define APP_ID "curve-macro"
+#define APP_TITLE "Curve Macro"
 
 #define DEFAULT_CALIBRATION 2500
 #define DEFAULT_STEPS 32
