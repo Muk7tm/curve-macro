@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Roblox Camera Flip
+Comment=Native X11 Roblox camera flip macro
+Exec=camera_flip
+Icon=input-mouse
+Terminal=false
+Categories=Utility;
