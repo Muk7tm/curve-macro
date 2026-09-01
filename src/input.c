@@ -61,14 +61,21 @@ static bool test_bit(int bit, const unsigned long *array)
     return (array[bit / (int)BITS_PER_LONG] & (1UL << (bit % (int)BITS_PER_LONG))) != 0;
 }
 
-static bool device_supports_key(int fd, int key_code)
+static bool device_has_ev_key(int fd)
 {
     unsigned long ev_bits[NBITS(EV_MAX)] = {0};
-    unsigned long key_bits[NBITS(KEY_MAX)] = {0};
 
     if (ioctl(fd, EVIOCGBIT(0, sizeof(ev_bits)), ev_bits) < 0)
         return false;
-    if (!test_bit(EV_KEY, ev_bits))
+
+    return test_bit(EV_KEY, ev_bits);
+}
+
+static bool device_supports_key(int fd, int key_code)
+{
+    unsigned long key_bits[NBITS(KEY_MAX)] = {0};
+
+    if (!device_has_ev_key(fd))
         return false;
     if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key_bits)), key_bits) < 0)
         return false;
@@ -76,12 +83,109 @@ static bool device_supports_key(int fd, int key_code)
     return test_bit(key_code, key_bits);
 }
 
-static int keyboard_score(int fd, const char *name)
+static bool is_bindable_keyboard_key(int key_code)
+{
+    return key_code > KEY_RESERVED && key_code < BTN_MISC && key_code != KEY_F12;
+}
+
+const char *input_key_name(int key_code, char *buffer, size_t buffer_size)
+{
+    const char *name = NULL;
+
+    switch (key_code)
+    {
+    case KEY_A: name = "KEY_A"; break;
+    case KEY_B: name = "KEY_B"; break;
+    case KEY_C: name = "KEY_C"; break;
+    case KEY_D: name = "KEY_D"; break;
+    case KEY_E: name = "KEY_E"; break;
+    case KEY_F: name = "KEY_F"; break;
+    case KEY_G: name = "KEY_G"; break;
+    case KEY_H: name = "KEY_H"; break;
+    case KEY_I: name = "KEY_I"; break;
+    case KEY_J: name = "KEY_J"; break;
+    case KEY_K: name = "KEY_K"; break;
+    case KEY_L: name = "KEY_L"; break;
+    case KEY_M: name = "KEY_M"; break;
+    case KEY_N: name = "KEY_N"; break;
+    case KEY_O: name = "KEY_O"; break;
+    case KEY_P: name = "KEY_P"; break;
+    case KEY_Q: name = "KEY_Q"; break;
+    case KEY_R: name = "KEY_R"; break;
+    case KEY_S: name = "KEY_S"; break;
+    case KEY_T: name = "KEY_T"; break;
+    case KEY_U: name = "KEY_U"; break;
+    case KEY_V: name = "KEY_V"; break;
+    case KEY_W: name = "KEY_W"; break;
+    case KEY_X: name = "KEY_X"; break;
+    case KEY_Y: name = "KEY_Y"; break;
+    case KEY_Z: name = "KEY_Z"; break;
+    case KEY_1: name = "KEY_1"; break;
+    case KEY_2: name = "KEY_2"; break;
+    case KEY_3: name = "KEY_3"; break;
+    case KEY_4: name = "KEY_4"; break;
+    case KEY_5: name = "KEY_5"; break;
+    case KEY_6: name = "KEY_6"; break;
+    case KEY_7: name = "KEY_7"; break;
+    case KEY_8: name = "KEY_8"; break;
+    case KEY_9: name = "KEY_9"; break;
+    case KEY_0: name = "KEY_0"; break;
+    case KEY_SPACE: name = "KEY_SPACE"; break;
+    case KEY_LEFTSHIFT: name = "KEY_LEFTSHIFT"; break;
+    case KEY_RIGHTSHIFT: name = "KEY_RIGHTSHIFT"; break;
+    case KEY_LEFTCTRL: name = "KEY_LEFTCTRL"; break;
+    case KEY_RIGHTCTRL: name = "KEY_RIGHTCTRL"; break;
+    case KEY_LEFTALT: name = "KEY_LEFTALT"; break;
+    case KEY_RIGHTALT: name = "KEY_RIGHTALT"; break;
+    case KEY_TAB: name = "KEY_TAB"; break;
+    case KEY_CAPSLOCK: name = "KEY_CAPSLOCK"; break;
+    case KEY_GRAVE: name = "KEY_GRAVE"; break;
+    case KEY_MINUS: name = "KEY_MINUS"; break;
+    case KEY_EQUAL: name = "KEY_EQUAL"; break;
+    case KEY_LEFTBRACE: name = "KEY_LEFTBRACE"; break;
+    case KEY_RIGHTBRACE: name = "KEY_RIGHTBRACE"; break;
+    case KEY_SEMICOLON: name = "KEY_SEMICOLON"; break;
+    case KEY_APOSTROPHE: name = "KEY_APOSTROPHE"; break;
+    case KEY_BACKSLASH: name = "KEY_BACKSLASH"; break;
+    case KEY_COMMA: name = "KEY_COMMA"; break;
+    case KEY_DOT: name = "KEY_DOT"; break;
+    case KEY_SLASH: name = "KEY_SLASH"; break;
+    case KEY_ESC: name = "KEY_ESC"; break;
+    case KEY_ENTER: name = "KEY_ENTER"; break;
+    case KEY_BACKSPACE: name = "KEY_BACKSPACE"; break;
+    case KEY_F1: name = "KEY_F1"; break;
+    case KEY_F2: name = "KEY_F2"; break;
+    case KEY_F3: name = "KEY_F3"; break;
+    case KEY_F4: name = "KEY_F4"; break;
+    case KEY_F5: name = "KEY_F5"; break;
+    case KEY_F6: name = "KEY_F6"; break;
+    case KEY_F7: name = "KEY_F7"; break;
+    case KEY_F8: name = "KEY_F8"; break;
+    case KEY_F9: name = "KEY_F9"; break;
+    case KEY_F10: name = "KEY_F10"; break;
+    case KEY_F11: name = "KEY_F11"; break;
+    case KEY_F12: name = "KEY_F12"; break;
+    default:
+        break;
+    }
+
+    if (name)
+        return name;
+
+    if (buffer && buffer_size > 0)
+        snprintf(buffer, buffer_size, "KEY_%d", key_code);
+
+    return buffer ? buffer : "KEY_UNKNOWN";
+}
+
+static int keyboard_score(int fd, const char *name, int target_key)
 {
     int score = 0;
 
-    if (device_supports_key(fd, KEY_C))
+    if (device_supports_key(fd, target_key))
         score += 100;
+    if (device_supports_key(fd, KEY_C))
+        score += 10;
     if (device_supports_key(fd, KEY_A))
         score += 10;
     if (device_supports_key(fd, KEY_Z))
@@ -128,11 +232,16 @@ static int compare_devices(const void *a, const void *b)
 
 size_t input_scan_devices(InputDevice *devices, size_t capacity)
 {
+    return input_scan_devices_for_key(KEY_C, devices, capacity);
+}
+
+size_t input_scan_devices_for_key(int key_code, InputDevice *devices, size_t capacity)
+{
     DIR *dir;
     struct dirent *entry;
     size_t count = 0;
 
-    if (!devices || capacity == 0)
+    if (!devices || capacity == 0 || key_code <= 0 || key_code > KEY_MAX)
         return 0;
 
     dir = opendir("/dev/input");
@@ -158,7 +267,7 @@ size_t input_scan_devices(InputDevice *devices, size_t capacity)
         if (fd < 0)
             continue;
 
-        if (!device_supports_key(fd, KEY_C))
+        if (!device_supports_key(fd, key_code))
         {
             close(fd);
             continue;
@@ -167,7 +276,7 @@ size_t input_scan_devices(InputDevice *devices, size_t capacity)
         if (ioctl(fd, EVIOCGNAME(sizeof(name)), name) < 0)
             snprintf(name, sizeof(name), "%s", "Unknown keyboard");
 
-        score = keyboard_score(fd, name);
+        score = keyboard_score(fd, name, key_code);
         close(fd);
 
         if (count < capacity)
@@ -187,8 +296,13 @@ size_t input_scan_devices(InputDevice *devices, size_t capacity)
 
 bool input_auto_detect_device(char *path, size_t path_size, char *name, size_t name_size)
 {
+    return input_auto_detect_device_for_key(KEY_C, path, path_size, name, name_size);
+}
+
+bool input_auto_detect_device_for_key(int key_code, char *path, size_t path_size, char *name, size_t name_size)
+{
     InputDevice devices[MAX_INPUT_DEVICES];
-    size_t count = input_scan_devices(devices, MAX_INPUT_DEVICES);
+    size_t count = input_scan_devices_for_key(key_code, devices, MAX_INPUT_DEVICES);
 
     if (count == 0)
         return false;
@@ -205,6 +319,170 @@ bool input_evdev_available(void)
 {
     InputDevice devices[MAX_INPUT_DEVICES];
     return input_scan_devices(devices, MAX_INPUT_DEVICES) > 0;
+}
+
+bool input_evdev_available_for_key(int key_code)
+{
+    InputDevice devices[MAX_INPUT_DEVICES];
+    return input_scan_devices_for_key(key_code, devices, MAX_INPUT_DEVICES) > 0;
+}
+
+static int open_record_devices(struct pollfd *fds, InputDevice *devices, size_t capacity)
+{
+    DIR *dir;
+    struct dirent *entry;
+    int count = 0;
+
+    dir = opendir("/dev/input");
+    if (!dir)
+        return 0;
+
+    while ((entry = readdir(dir)) != NULL && count < (int)capacity)
+    {
+        char path[PATH_MAX];
+        char name[256] = "Unknown keyboard";
+        int written;
+        int fd;
+        int score;
+
+        if (strncmp(entry->d_name, "event", 5) != 0)
+            continue;
+
+        written = snprintf(path, sizeof(path), "/dev/input/%s", entry->d_name);
+        if (written < 0 || (size_t)written >= sizeof(path))
+            continue;
+
+        fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+        if (fd < 0)
+            continue;
+        if (!device_has_ev_key(fd))
+        {
+            close(fd);
+            continue;
+        }
+
+        if (ioctl(fd, EVIOCGNAME(sizeof(name)), name) < 0)
+            snprintf(name, sizeof(name), "%s", "Unknown keyboard");
+
+        score = keyboard_score(fd, name, KEY_C);
+        if (score < 20)
+        {
+            close(fd);
+            continue;
+        }
+
+        snprintf(devices[count].path, sizeof(devices[count].path), "%s", path);
+        snprintf(devices[count].name, sizeof(devices[count].name), "%s", name);
+        devices[count].readable = true;
+        devices[count].score = score;
+        fds[count].fd = fd;
+        fds[count].events = POLLIN;
+        fds[count].revents = 0;
+        ++count;
+    }
+
+    closedir(dir);
+    return count;
+}
+
+static void close_record_devices(struct pollfd *fds, int count)
+{
+    for (int i = 0; i < count; ++i)
+    {
+        if (fds[i].fd >= 0)
+            close(fds[i].fd);
+    }
+}
+
+static void drain_record_devices(struct pollfd *fds, int count)
+{
+    for (int i = 0; i < count; ++i)
+    {
+        struct input_event ev;
+
+        while (read(fds[i].fd, &ev, sizeof(ev)) == (ssize_t)sizeof(ev))
+        {
+        }
+    }
+}
+
+bool input_record_next_key(const char *preferred_device,
+                           int timeout_ms,
+                           KeyRecord *record,
+                           char *error,
+                           size_t error_size)
+{
+    struct pollfd fds[MAX_INPUT_DEVICES];
+    InputDevice devices[MAX_INPUT_DEVICES];
+    int count;
+    int rc;
+
+    (void)preferred_device;
+
+    if (!record)
+    {
+        input_set_error(error, error_size, "Missing key record output.");
+        return false;
+    }
+
+    count = open_record_devices(fds, devices, MAX_INPUT_DEVICES);
+    if (count <= 0)
+    {
+        input_set_error(error, error_size, "No readable keyboard event devices found.");
+        return false;
+    }
+
+    drain_record_devices(fds, count);
+    rc = poll(fds, (nfds_t)count, timeout_ms);
+    if (rc <= 0)
+    {
+        close_record_devices(fds, count);
+        input_set_error(error, error_size, rc == 0 ? "Timed out waiting for a key press." : "Could not poll keyboard devices.");
+        return false;
+    }
+
+    for (int i = 0; i < count; ++i)
+    {
+        if (!(fds[i].revents & POLLIN))
+            continue;
+
+        while (true)
+        {
+            struct input_event ev;
+            char key_name[64];
+            ssize_t n = read(fds[i].fd, &ev, sizeof(ev));
+
+            if (n < 0)
+            {
+                if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    break;
+                close_record_devices(fds, count);
+                input_set_error(error, error_size, "Could not read keyboard event while recording.");
+                return false;
+            }
+            if (n != (ssize_t)sizeof(ev) || ev.type != EV_KEY || ev.value != 1)
+                continue;
+            if (ev.code == KEY_F12)
+            {
+                close_record_devices(fds, count);
+                input_set_error(error, error_size, "F12 is reserved for emergency stop.");
+                return false;
+            }
+            if (!is_bindable_keyboard_key(ev.code))
+                continue;
+
+            snprintf(record->path, sizeof(record->path), "%s", devices[i].path);
+            snprintf(record->device_name, sizeof(record->device_name), "%s", devices[i].name);
+            record->key_code = ev.code;
+            snprintf(record->key_name, sizeof(record->key_name), "%s", input_key_name(ev.code, key_name, sizeof(key_name)));
+            close_record_devices(fds, count);
+            return true;
+        }
+    }
+
+    close_record_devices(fds, count);
+    input_set_error(error, error_size, "No bindable keyboard key was detected.");
+    return false;
 }
 
 static void invoke_state_callback(bool running_state, const char *reason)
@@ -500,11 +778,17 @@ bool input_start_macro(const AppConfig *config,
 {
     char device_path[PATH_MAX];
     char device_name[256];
+    char key_name[64];
     int flags;
 
     if (!config)
     {
         input_set_error(error, error_size, "Missing configuration.");
+        return false;
+    }
+    if (!is_bindable_keyboard_key(config->key_code))
+    {
+        input_set_error(error, error_size, "Invalid macro key. F12 is reserved for emergency stop.");
         return false;
     }
 
@@ -521,9 +805,12 @@ bool input_start_macro(const AppConfig *config,
 
     if (strcmp(config->keyboard_device, "auto") == 0)
     {
-        if (!input_auto_detect_device(device_path, sizeof(device_path), device_name, sizeof(device_name)))
+        if (!input_auto_detect_device_for_key(config->key_code, device_path, sizeof(device_path), device_name, sizeof(device_name)))
         {
-            input_set_error(error, error_size, "Could not auto-detect a readable keyboard device with KEY_C.");
+            snprintf(error,
+                     error_size,
+                     "Could not auto-detect a readable keyboard device with %s.",
+                     input_key_name(config->key_code, key_name, sizeof(key_name)));
             return false;
         }
     }

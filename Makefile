@@ -17,7 +17,7 @@ USER_BINDIR ?= $(USER_PREFIX)/bin
 USER_APPDIR ?= $(USER_PREFIX)/share/applications
 USER_DESKTOP ?= $(HOME)/Desktop
 
-.PHONY: all clean install install-user
+.PHONY: all clean install install-user install-udev-rule grant-devices-now
 
 all: $(TARGET)
 
@@ -42,6 +42,15 @@ install-user: $(TARGET)
 		sed "s|^Exec=.*|Exec=$(USER_BINDIR)/$(TARGET)|" config/curve-macro.desktop > $(USER_DESKTOP)/curve-macro.desktop; \
 		chmod 755 $(USER_DESKTOP)/curve-macro.desktop; \
 	fi
+
+install-udev-rule:
+	sudo install -Dm644 config/99-curve-macro.rules /etc/udev/rules.d/99-curve-macro.rules
+	sudo udevadm control --reload-rules
+	sudo udevadm trigger
+
+grant-devices-now:
+	sudo setfacl -m u:$(USER):rw /dev/input/event*
+	if [ -e /dev/uinput ]; then sudo setfacl -m u:$(USER):rw /dev/uinput; fi
 
 clean:
 	rm -f $(TARGET) camera_flip $(OBJ)

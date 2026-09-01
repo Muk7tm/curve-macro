@@ -27,6 +27,8 @@ typedef struct GuiApp
     GtkWidget *click_switch;
     GtkWidget *click_delay_spin;
     GtkWidget *device_combo;
+    GtkWidget *key_label;
+    GtkWidget *record_key_button;
     GtkWidget *start_button;
     GtkWidget *stop_button;
     AppConfig config;
@@ -89,7 +91,6 @@ static void config_from_widgets(GuiApp *app)
     app->config.step_delay_us = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(app->step_delay_spin));
     app->config.click_enabled = gtk_switch_get_active(GTK_SWITCH(app->click_switch));
     app->config.click_delay_ms = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(app->click_delay_spin));
-    app->config.key_code = KEY_C;
     app->config.performance_max = true;
 
     device_id = gtk_combo_box_get_active_id(GTK_COMBO_BOX(app->device_combo));
@@ -101,11 +102,21 @@ static void config_from_widgets(GuiApp *app)
 
 static void widgets_from_config(GuiApp *app)
 {
+    char key_name[64];
+    char key_text[96];
+
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(app->calibration_spin), app->config.calibration);
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(app->steps_spin), app->config.steps);
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(app->step_delay_spin), app->config.step_delay_us);
     gtk_switch_set_active(GTK_SWITCH(app->click_switch), app->config.click_enabled);
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(app->click_delay_spin), app->config.click_delay_ms);
+
+    snprintf(key_text,
+             sizeof(key_text),
+             "%s (%d)",
+             input_key_name(app->config.key_code, key_name, sizeof(key_name)),
+             app->config.key_code);
+    gtk_label_set_text(GTK_LABEL(app->key_label), key_text);
 }
 
 static void update_status(GuiApp *app, bool running, const char *reason)
@@ -137,7 +148,7 @@ static void update_diagnostics(GuiApp *app)
         xtest_ok = camera_xtest_available(display, &major, &minor, error, sizeof(error));
         XCloseDisplay(display);
     }
-    evdev_ok = input_evdev_available();
+    evdev_ok = input_evdev_available_for_key(app->config.key_code);
     uinput_ok = performance_uinput_available();
 
     gtk_label_set_text(GTK_LABEL(app->x11_label), x11_ok ? "OK" : "FAILED");
@@ -154,7 +165,7 @@ static void update_diagnostics(GuiApp *app)
     gtk_label_set_text(GTK_LABEL(app->evdev_label), evdev_ok ? "OK" : "FAILED");
     gtk_label_set_text(GTK_LABEL(app->uinput_label), uinput_ok ? "AVAILABLE" : "FAILED");
 
-    if (input_auto_detect_device(detected_path, sizeof(detected_path), detected_name, sizeof(detected_name)))
+    if (input_auto_detect_device_for_key(app->config.key_code, detected_path, sizeof(detected_path), detected_name, sizeof(detected_name)))
     {
         char text[PATH_MAX + 300];
         snprintf(text, sizeof(text), "%s\n%s", detected_name, detected_path);
@@ -163,8 +174,15 @@ static void update_diagnostics(GuiApp *app)
     }
     else
     {
-        gtk_label_set_text(GTK_LABEL(app->detected_label), "No readable KEY_C keyboard found");
-        gtk_label_set_text(GTK_LABEL(app->keyboard_diag_label), "No readable KEY_C keyboard found");
+        char key_name[64];
+        char text[160];
+
+        snprintf(text,
+                 sizeof(text),
+                 "No readable %s keyboard found",
+                 input_key_name(app->config.key_code, key_name, sizeof(key_name)));
+        gtk_label_set_text(GTK_LABEL(app->detected_label), text);
+        gtk_label_set_text(GTK_LABEL(app->keyboard_diag_label), text);
     }
 }
 
@@ -181,7 +199,7 @@ static void refresh_devices(GuiApp *app)
     gtk_combo_box_text_remove_all(combo);
     gtk_combo_box_text_append(combo, "auto", "Auto Detect");
 
-    app->device_count = input_scan_devices(app->devices, MAX_INPUT_DEVICES);
+    app->device_count = input_scan_devices_for_key(app->config.key_code, app->devices, MAX_INPUT_DEVICES);
     for (size_t i = 0; i < app->device_count; ++i)
     {
         char text[PATH_MAX + 300];
@@ -259,6 +277,44 @@ static void on_refresh_clicked(GtkButton *button, gpointer user_data)
     (void)button;
     config_from_widgets(app);
     refresh_devices(app);
+}
+
+static void on_record_key_clicked(GtkButton *button, gpointer user_data)
+{
+    GuiApp *app = user_data;
+    KeyRecord record;
+    char error[512] = "";
+    const char *device_id;
+
+    (void)button;
+    if (input_is_running())
+    {
+        show_error(GTK_WINDOW(app->window), "Stop the macro before recording a keybind.");
+        return;
+    }
+
+    config_from_widgets(app);
+    device_id = gtk_combo_box_get_active_id(GTK_COMBO_BOX(app->device_combo));
+    gtk_button_set_label(GTK_BUTTON(app->record_key_button), "Press a key...");
+    gtk_widget_set_sensitive(app->record_key_button, FALSE);
+    while (gtk_events_pending())
+        gtk_main_iteration();
+
+    if (!input_record_next_key(device_id ? device_id : "auto", 10000, &record, error, sizeof(error)))
+    {
+        gtk_button_set_label(GTK_BUTTON(app->record_key_button), "Record Key");
+        gtk_widget_set_sensitive(app->record_key_button, TRUE);
+        show_error(GTK_WINDOW(app->window), error);
+        return;
+    }
+
+    app->config.key_code = record.key_code;
+    snprintf(app->config.keyboard_device, sizeof(app->config.keyboard_device), "%s", record.path);
+    widgets_from_config(app);
+    refresh_devices(app);
+    gtk_combo_box_set_active_id(GTK_COMBO_BOX(app->device_combo), record.path);
+    gtk_button_set_label(GTK_BUTTON(app->record_key_button), "Record Key");
+    gtk_widget_set_sensitive(app->record_key_button, TRUE);
 }
 
 static void on_save_clicked(GtkButton *button, gpointer user_data)
@@ -425,11 +481,14 @@ int gui_run(int argc, char **argv)
     gtk_widget_set_halign(app.detected_label, GTK_ALIGN_START);
     row(left_grid, 8, "Keyboard Device:", app.device_combo);
     row(left_grid, 9, "Detected Device:", app.detected_label);
-    row(left_grid, 10, "C Key:", gtk_label_new("KEY_C (46)"));
+    app.key_label = gtk_label_new("");
+    row(left_grid, 10, "Keybind:", app.key_label);
 
     buttons = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     refresh_button = gtk_button_new_with_label("Refresh Devices");
+    app.record_key_button = gtk_button_new_with_label("Record Key");
     gtk_box_pack_start(GTK_BOX(buttons), refresh_button, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(buttons), app.record_key_button, FALSE, FALSE, 0);
     gtk_grid_attach(GTK_GRID(left_grid), buttons, 0, 11, 2, 1);
 
     gtk_grid_attach(GTK_GRID(right_grid), section_label("Performance"), 0, 0, 2, 1);
@@ -467,6 +526,7 @@ int gui_run(int argc, char **argv)
     g_signal_connect(app.start_button, "clicked", G_CALLBACK(on_start_clicked), &app);
     g_signal_connect(app.stop_button, "clicked", G_CALLBACK(on_stop_clicked), &app);
     g_signal_connect(refresh_button, "clicked", G_CALLBACK(on_refresh_clicked), &app);
+    g_signal_connect(app.record_key_button, "clicked", G_CALLBACK(on_record_key_clicked), &app);
     g_signal_connect(save_button, "clicked", G_CALLBACK(on_save_clicked), &app);
     g_signal_connect(reset_button, "clicked", G_CALLBACK(on_reset_clicked), &app);
     g_signal_connect(test_flip_button, "clicked", G_CALLBACK(on_test_flip_clicked), &app);

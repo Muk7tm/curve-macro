@@ -51,13 +51,17 @@ getent group input
 Install the included udev rule if your user cannot read `/dev/input/event*` or `/dev/uinput`:
 
 ```fish
-sudo install -Dm644 config/99-curve-macro.rules /etc/udev/rules.d/99-curve-macro.rules
-sudo udevadm control --reload-rules
-sudo udevadm trigger
+make install-udev-rule
 sudo usermod -aG input $USER
 ```
 
-Log out and back in, then verify:
+The udev rule also uses `TAG+="uaccess"`, so the active desktop session can receive device ACLs without waiting for a new login. To grant access immediately in the current session, run:
+
+```fish
+make grant-devices-now
+```
+
+The `usermod` group change still takes effect after the next login and is useful as a fallback. Verify access:
 
 ```fish
 id -nG
@@ -93,7 +97,7 @@ key=46
 mode=maximum
 ```
 
-Change calibration, step count, step delay, click enable, click delay, and keyboard device in the GUI, then press **Save Settings**. **Reset Defaults** restores the values above.
+Change calibration, step count, step delay, click enable, click delay, keybind, and keyboard device in the GUI, then press **Save Settings**. **Record Key** waits for the next physical keyboard press and stores both the key code and the event device that produced it. **Reset Defaults** restores the values above.
 
 ## Testing
 
